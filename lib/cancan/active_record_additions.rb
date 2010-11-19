@@ -22,7 +22,22 @@ module CanCan
       def accessible_by(ability, action = :read)
         query = ability.query(action, self)
         if respond_to?(:where) && respond_to?(:joins)
-          where(query.conditions).joins(query.joins)
+          sql_query = joins(query.joins).to_sql
+          joins_re = /INNER JOIN [\"`](.+)[\"`] ON/
+          m = joins_re.match(sql_query)
+          if m && m.captures[0]
+            query_conditions = {}
+            query.conditions.each_pair {|key, value|
+              if query.joins.to_s == key.to_s
+                query_conditions[m.captures[0]] = value
+              else
+                query_conditions[key] = value
+              end
+            }
+          else
+            query_conditions = query.conditions
+          end
+          joins(query.joins).where(query_conditions)
         else
           scoped(:conditions => query.conditions, :joins => query.joins)
         end
