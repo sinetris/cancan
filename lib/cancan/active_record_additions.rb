@@ -22,13 +22,17 @@ module CanCan
       def accessible_by(ability, action = :read)
         query = ability.query(action, self)
         if respond_to?(:where) && respond_to?(:joins)
-          sql_query = joins(query.joins).to_sql
+          # TODO Change the following code to someting less spaghetti-code ;)
+          if defined? ActiveRecord && joins(query.joins).class == ActiveRecord::Relation
+            sql_query = joins(query.joins).to_sql
+          else
+            sql_query = ""
+          end
           joins_re = /INNER JOIN [\"`](.+)[\"`] ON/
-          m = joins_re.match(sql_query)
-          if m && m.captures[0]
+          if m = joins_re.match(sql_query) && m.captures[0]
             query_conditions = {}
-            query.conditions.each_pair {|key, value|
-              if query.joins.to_s == key.to_s
+            query.conditions.each_pair { |key, value|
+              if key.to_s == query.joins.to_s
                 query_conditions[m.captures[0]] = value
               else
                 query_conditions[key] = value
@@ -37,7 +41,9 @@ module CanCan
           else
             query_conditions = query.conditions
           end
-          joins(query.joins).where(query_conditions)
+          where(query_conditions).joins(query.joins)
+          # end TODO
+          # where(query.conditions).joins(query.joins)
         else
           scoped(:conditions => query.conditions, :joins => query.joins)
         end
