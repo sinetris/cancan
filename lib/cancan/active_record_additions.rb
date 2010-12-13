@@ -29,7 +29,8 @@ module CanCan
             sql_query = ""
           end
           joins_re = /INNER JOIN [\"`](.+)[\"`] ON/
-          if m = joins_re.match(sql_query) && m.captures[0]
+          m = joins_re.match(sql_query)
+          if m && m.captures[0]
             query_conditions = {}
             query.conditions.each_pair { |key, value|
               if key.to_s == query.joins.to_s
